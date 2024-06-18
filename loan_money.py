@@ -119,6 +119,7 @@ def create_loan():
 
         messagebox.showinfo("Success", "Thêm khoản vay thành công.")
         refresh_combobox()
+        refresh_treeview()
     except ValueError:
         messagebox.showerror("Error", "Vui lòng nhập số hợp lệ.")
 
@@ -216,6 +217,7 @@ def update_loan():
 
                 messagebox.showinfo("Success", "Cập nhật khoản vay thành công.")
                 refresh_combobox()
+                refresh_treeview()
                 return
             except ValueError:
                 messagebox.showerror("Error", "Vui lòng nhập số hợp lệ.")
@@ -237,14 +239,21 @@ def delete_loan():
 
             messagebox.showinfo("Success", "Xóa khoản vay thành công.")
             refresh_combobox()
+            refresh_treeview()
             return
     
     messagebox.showerror("Error", "Không tìm thấy khoản vay để xóa.")
 
+def refresh_treeview():
+    for item in tree.get_children():
+        tree.delete(item)
+    for entry in data_list:
+        tree.insert('', 'end', values=list(entry.values()))
+
 # Tạo cửa sổ chính
 root = tk.Tk()
 root.title("Loan Calculator")
-root.geometry("700x800")
+root.geometry("900x800")
 
 # Tạo người mượn tiền
 tk.Label(root, text="Tên người chồng:").grid(row=0, column=0, padx=10, pady=10)
@@ -314,6 +323,20 @@ button_update.grid(row=14, column=0, columnspan=2, pady=20)
 button_delete = tk.Button(root, text="Xóa", command=delete_loan)
 button_delete.grid(row=14, column=2, padx=10, pady=10)
 
+# Tạo Treeview để hiển thị dữ liệu
+columns = ["Husband Name", "Wife Name", "Husband ID", "Wife ID", "Address", "Collateral Value", "Loan Amount", "Loan Duration", "Interest Rate", "Interest Amount", "Total Payment"]
+tree = ttk.Treeview(root, columns=columns, show='headings')
+for col in columns:
+    tree.heading(col, text=col)
+    tree.column(col, width=120)
+tree.grid(row=15, column=0, columnspan=3, padx=10, pady=10)
+
+# Load dữ liệu từ excel lên
+data = load_data()
+data_list = data.to_dict('records')
+
+
 # Vòng lặp chính
 refresh_combobox()
+refresh_treeview()
 root.mainloop()
