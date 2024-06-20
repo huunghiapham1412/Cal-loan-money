@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import pandas as pd
 import os
+from datetime import datetime
 
 FILE_NAME = 'loan_data.xlsx'
 data_list = []
@@ -9,7 +10,7 @@ data_list = []
 # Kiểm tra và tạo tệp Excel nếu chưa tồn tại
 def check_create_excel_file():
     if not os.path.exists(FILE_NAME):
-        columns = ["Husband Name", "Wife Name", "Husband ID", "Wife ID", "Address", "Collateral Value", "Loan Amount", "Loan Duration", "Interest Rate", "Interest Amount", "Total Payment"]
+        columns = ["Date", "Husband Name", "Wife Name", "Husband ID", "Wife ID", "Address", "Collateral Value", "Loan Amount", "Loan Duration", "Interest Rate", "Interest Amount", "Total Payment"]
         df = pd.DataFrame(columns=columns)
         df.to_excel(FILE_NAME, index=False)
 
@@ -35,6 +36,13 @@ def is_valid_name(name):
 
 def is_valid_id(id_number):
     return id_number.isdigit()
+
+def is_valid_date(date_text):
+    try:
+        datetime.strptime(date_text, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
 
 def calculate_loan(loan_amount, loan_duration):
     if loan_duration < 30:
@@ -64,9 +72,9 @@ def display_loan_results(interest_rate, interest_amount, total_payment):
     entry_interest_amount.config(state='readonly')
     entry_total_payment.config(state='readonly')
 
-    entry_interest_rate.grid(row=10, column=1, padx=10, pady=10)
-    entry_interest_amount.grid(row=11, column=1, padx=10, pady=10)
-    entry_total_payment.grid(row=12, column=1, padx=10, pady=10)
+    entry_interest_rate.grid(row=11, column=1, padx=10, pady=10)
+    entry_interest_amount.grid(row=12, column=1, padx=10, pady=10)
+    entry_total_payment.grid(row=13, column=1, padx=10, pady=10)
 
 def refresh_treeview():
     for item in tree.get_children():
@@ -76,6 +84,7 @@ def refresh_treeview():
 
 def create_loan():
     try:
+        date = entry_date.get()
         husband_name = entry_husband_name.get()
         wife_name = entry_wife_name.get()
         husband_id = entry_husband_id.get()
@@ -85,6 +94,9 @@ def create_loan():
         loan_amount = float(entry_loan_amount.get())
         loan_duration = int(entry_loan_duration.get())
 
+        if not is_valid_date(date):
+            messagebox.showerror("Error", "Ngày tháng năm không hợp lệ. Định dạng đúng: MM-DD-YYYY.")
+            return
         if not is_valid_name(husband_name):
             messagebox.showerror("Error", "Tên người chồng chỉ được chứa chữ cái.")
             return
@@ -105,6 +117,7 @@ def create_loan():
         display_loan_results(interest_rate, interest_amount, total_payment)
 
         new_entry = {
+            "Date": date,
             "Husband Name": husband_name,
             "Wife Name": wife_name,
             "Husband ID": husband_id,
@@ -135,6 +148,9 @@ def search_loan():
     
     for entry in data_list:
         if entry["Husband ID"] == identifier or entry["Wife ID"] == identifier:
+            entry_date.delete(0, tk.END)
+            entry_date.insert(0, entry['Date'])
+
             entry_husband_name.delete(0, tk.END)
             entry_husband_name.insert(0, entry['Husband Name'])
 
@@ -173,6 +189,7 @@ def update_loan():
     for index, entry in enumerate(data_list):
         if entry["Husband ID"] == identifier or entry["Wife ID"] == identifier:
             try:
+                date = entry_date.get()
                 husband_name = entry_husband_name.get()
                 wife_name = entry_wife_name.get()
                 husband_id = entry_husband_id.get()
@@ -182,6 +199,9 @@ def update_loan():
                 loan_amount = float(entry_loan_amount.get())
                 loan_duration = int(entry_loan_duration.get())
 
+                if not is_valid_date(date):
+                    messagebox.showerror("Error", "Ngày tháng năm không hợp lệ. Định dạng đúng: MM-DD-YYYY.")
+                    return
                 if not is_valid_name(husband_name):
                     messagebox.showerror("Error", "Tên người chồng chỉ được chứa chữ cái.")
                     return
@@ -202,6 +222,7 @@ def update_loan():
                 display_loan_results(interest_rate, interest_amount, total_payment)
 
                 updated_entry = {
+                    "Date": date,
                     "Husband Name": husband_name,
                     "Wife Name": wife_name,
                     "Husband ID": husband_id,
@@ -214,7 +235,6 @@ def update_loan():
                     "Interest Amount": interest_amount,
                     "Total Payment": total_payment
                 }
-                
                 data_list[index] = updated_entry
                 
                 # Save to Excel
@@ -249,60 +269,72 @@ def delete_loan():
     
     messagebox.showerror("Error", "Không tìm thấy khoản vay để xóa.")
 
+def on_date_entry_key_release(event):
+    content = entry_date.get()
+    if len(content) == 2 or len(content) == 5:
+        entry_date.insert(tk.END, '-')
+    elif len(content) > 10:
+        entry_date.delete(10, tk.END)
+
 # Giao diện Tkinter
 root = tk.Tk()
 root.title("Loan Management System")
 
 # Labels và Entries
-tk.Label(root, text="Husband Name").grid(row=0, column=0, padx=10, pady=10)
+tk.Label(root, text="Date (MM-DD-YYYY)").grid(row=0, column=0, padx=10, pady=10)
+entry_date = tk.Entry(root)
+entry_date.grid(row=0, column=1, padx=10, pady=10)
+entry_date.bind('<KeyRelease>', on_date_entry_key_release)
+
+tk.Label(root, text="Husband Name").grid(row=1, column=0, padx=10, pady=10)
 entry_husband_name = tk.Entry(root)
-entry_husband_name.grid(row=0, column=1, padx=10, pady=10)
+entry_husband_name.grid(row=1, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Wife Name").grid(row=1, column=0, padx=10, pady=10)
+tk.Label(root, text="Wife Name").grid(row=2, column=0, padx=10, pady=10)
 entry_wife_name = tk.Entry(root)
-entry_wife_name.grid(row=1, column=1, padx=10, pady=10)
+entry_wife_name.grid(row=2, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Husband ID").grid(row=2, column=0, padx=10, pady=10)
+tk.Label(root, text="Husband ID").grid(row=3, column=0, padx=10, pady=10)
 entry_husband_id = tk.Entry(root)
-entry_husband_id.grid(row=2, column=1, padx=10, pady=10)
+entry_husband_id.grid(row=3, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Wife ID").grid(row=3, column=0, padx=10, pady=10)
+tk.Label(root, text="Wife ID").grid(row=4, column=0, padx=10, pady=10)
 entry_wife_id = tk.Entry(root)
-entry_wife_id.grid(row=3, column=1, padx=10, pady=10)
+entry_wife_id.grid(row=4, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Address").grid(row=4, column=0, padx=10, pady=10)
+tk.Label(root, text="Address").grid(row=5, column=0, padx=10, pady=10)
 entry_address = tk.Entry(root)
-entry_address.grid(row=4, column=1, padx=10, pady=10)
+entry_address.grid(row=5, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Collateral Value (VND)").grid(row=5, column=0, padx=10, pady=10)
+tk.Label(root, text="Collateral Value (VND)").grid(row=6, column=0, padx=10, pady=10)
 entry_collateral_value = tk.Entry(root)
-entry_collateral_value.grid(row=5, column=1, padx=10, pady=10)
+entry_collateral_value.grid(row=6, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Loan Amount (VND)").grid(row=6, column=0, padx=10, pady=10)
+tk.Label(root, text="Loan Amount (VND)").grid(row=7, column=0, padx=10, pady=10)
 entry_loan_amount = tk.Entry(root)
-entry_loan_amount.grid(row=6, column=1, padx=10, pady=10)
+entry_loan_amount.grid(row=7, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Loan Duration (days)").grid(row=7, column=0, padx=10, pady=10)
+tk.Label(root, text="Loan Duration (days)").grid(row=8, column=0, padx=10, pady=10)
 entry_loan_duration = tk.Entry(root)
-entry_loan_duration.grid(row=7, column=1, padx=10, pady=10)
+entry_loan_duration.grid(row=8, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Interest Rate").grid(row=10, column=0, padx=10, pady=10)
+tk.Label(root, text="Interest Rate").grid(row=11, column=0, padx=10, pady=10)
 entry_interest_rate = tk.Entry(root, state='readonly')
-entry_interest_rate.grid(row=10, column=1, padx=10, pady=10)
+entry_interest_rate.grid(row=11, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Interest Amount").grid(row=11, column=0, padx=10, pady=10)
+tk.Label(root, text="Interest Amount").grid(row=12, column=0, padx=10, pady=10)
 entry_interest_amount = tk.Entry(root, state='readonly')
-entry_interest_amount.grid(row=11, column=1, padx=10, pady=10)
+entry_interest_amount.grid(row=12, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Total Payment").grid(row=12, column=0, padx=10, pady=10)
+tk.Label(root, text="Total Payment").grid(row=13, column=0, padx=10, pady=10)
 entry_total_payment = tk.Entry(root, state='readonly')
-entry_total_payment.grid(row=12, column=1, padx=10, pady=10)
+entry_total_payment.grid(row=13, column=1, padx=10, pady=10)
 
 # Buttons
-tk.Button(root, text="Create Loan", command=create_loan).grid(row=8, column=0, padx=10, pady=10)
-tk.Button(root, text="Update Loan", command=update_loan).grid(row=8, column=1, padx=10, pady=10)
-tk.Button(root, text="Delete Loan", command=delete_loan).grid(row=9, column=0, padx=10, pady=10)
-tk.Button(root, text="Search Loan", command=search_loan).grid(row=9, column=1, padx=10, pady=10)
+tk.Button(root, text="Create Loan", command=create_loan).grid(row=9, column=0, padx=10, pady=10)
+tk.Button(root, text="Update Loan", command=update_loan).grid(row=9, column=1, padx=10, pady=10)
+tk.Button(root, text="Delete Loan", command=delete_loan).grid(row=10, column=0, padx=10, pady=10)
+tk.Button(root, text="Search Loan", command=search_loan).grid(row=10, column=1, padx=10, pady=10)
 
 # Combobox để tìm kiếm và cập nhật
 tk.Label(root, text="Search/Update by ID").grid(row=14, column=0, padx=10, pady=10)
@@ -310,7 +342,7 @@ combobox_update = ttk.Combobox(root)
 combobox_update.grid(row=14, column=1, padx=10, pady=10)
 
 # Tạo Treeview để hiển thị dữ liệu
-columns = ["Husband Name", "Wife Name", "Husband ID", "Wife ID", "Address", "Collateral Value", "Loan Amount", "Loan Duration", "Interest Rate", "Interest Amount", "Total Payment"]
+columns = ["Date", "Husband Name", "Wife Name", "Husband ID", "Wife ID", "Address", "Collateral Value", "Loan Amount", "Loan Duration", "Interest Rate", "Interest Amount", "Total Payment"]
 tree = ttk.Treeview(root, columns=columns, show='headings')
 for col in columns:
     tree.heading(col, text=col)
